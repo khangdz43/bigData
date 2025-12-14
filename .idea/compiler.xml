@@ -9,5 +9,8 @@
         <module name="DIEM_A" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="WEB_HIVE" target="11" />
+    </bytecodeTargetLevel>
   </component>
 </project>

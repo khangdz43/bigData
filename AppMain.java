@@ -24,8 +24,8 @@ public class AppMain extends JFrame {
         connectToDatabase();
 
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Bệnh nhân", new PatientPanel(connection));
-         tabs.addTab("Chỉ số tiểu đường", new RecordPanel(connection));
+        tabs.addTab("THÊM DANH SÁCH Bệnh nhân", new MedicalRecordPanel(connection));
+         tabs.addTab("Xem danh sách bệnh nhân", new PatientListPanel(connection));
          tabs.addTab("Thống kê", new StatisticPanel(connection));
 
         add(tabs, BorderLayout.CENTER);

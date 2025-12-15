@@ -1,102 +1,123 @@
 import javax.swing.*;
 import java.awt.*;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class StatisticPanel extends JPanel {
 
     private Connection conn;
     private JTextArea area;
+    private BarChartPanel chartPanel;
 
     public StatisticPanel(Connection conn) {
         this.conn = conn;
-        setLayout(new BorderLayout(10,10));
+        setLayout(new BorderLayout(10, 10));
 
-        area = new JTextArea();
+        // ===== BUTTON BAR =====
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+
+        JButton btnGender = new JButton("Giới tính");
+        JButton btnRisk = new JButton("Nguy cơ");
+        JButton btnCity = new JButton("Thành phố");
+
+        btnGender.addActionListener(e -> loadGenderStat());
+        btnRisk.addActionListener(e -> loadRiskStat());
+        btnCity.addActionListener(e -> loadCityStat());
+
+        buttonPanel.add(btnGender);
+        buttonPanel.add(btnRisk);
+        buttonPanel.add(btnCity);
+
+        add(buttonPanel, BorderLayout.NORTH);
+
+        // ===== CHART =====
+        chartPanel = new BarChartPanel();
+        chartPanel.setPreferredSize(new Dimension(600, 300));
+        add(chartPanel, BorderLayout.CENTER);
+
+        // ===== TEXT =====
+        area = new JTextArea(5, 20);
         area.setEditable(false);
-        area.setFont(new Font("Consolas", Font.PLAIN, 13));
-
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-
-        JButton btnType = new JButton("Thống kê theo loại tiểu đường");
-        JButton btnRisk = new JButton("Thống kê theo mức độ nguy cơ");
-        JButton btnDetail = new JButton("Danh sách chẩn đoán chi tiết");
-
-        btnType.addActionListener(e -> statByType());
-        btnRisk.addActionListener(e -> statByRisk());
-        btnDetail.addActionListener(e -> statDetail());
-
-        top.add(btnType);
-        top.add(btnRisk);
-        top.add(btnDetail);
-
-        add(top, BorderLayout.NORTH);
-        add(new JScrollPane(area), BorderLayout.CENTER);
+        add(new JScrollPane(area), BorderLayout.SOUTH);
     }
 
-    // 1️⃣ Thống kê theo loại tiểu đường
-    private void statByType() {
+    // ================= GIỚI TÍNH =================
+    private void loadGenderStat() {
         area.setText("");
-        try {
-            String sql = "SELECT diabetes_type, COUNT(*) FROM diagnosis GROUP BY diabetes_type";
-            ResultSet rs = conn.createStatement().executeQuery(sql);
+        Map<String, Integer> data = new LinkedHashMap<>();
 
-            area.append("📊 THỐNG KÊ THEO LOẠI TIỂU ĐƯỜNG\n");
-            area.append("---------------------------------\n");
+        String sql = "SELECT gender, COUNT(*) FROM patients GROUP BY gender";
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                area.append(
-                        rs.getString(1) + " : " + rs.getInt(2) + " ca\n"
-                );
+                data.put(rs.getString(1), rs.getInt(2));
+                area.append(rs.getString(1) + ": " + rs.getInt(2) + "\n");
             }
+
+            chartPanel.setData("Phân bố giới tính", data);
+
         } catch (Exception e) {
-            area.setText("Lỗi thống kê");
+            area.setText("Lỗi: " + e.getMessage());
         }
     }
 
-    // 2️⃣ Thống kê theo mức độ nguy cơ
-    private void statByRisk() {
+    // ================= NGUY CƠ =================
+    private void loadRiskStat() {
         area.setText("");
-        try {
-            String sql = "SELECT risk_level, COUNT(*) FROM diagnosis GROUP BY risk_level";
-            ResultSet rs = conn.createStatement().executeQuery(sql);
+        Map<String, Integer> data = new LinkedHashMap<>();
 
-            area.append("⚠️ THỐNG KÊ THEO MỨC ĐỘ NGUY CƠ\n");
-            area.append("---------------------------------\n");
+        String sql =
+                "SELECT CASE " +
+                        " WHEN glucose_level < 100 THEN 'Bình thường' " +
+                        " WHEN glucose_level BETWEEN 100 AND 125 THEN 'Tiền tiểu đường' " +
+                        " ELSE 'Tiểu đường' END AS risk, COUNT(*) " +
+                        "FROM diabetes_records " +
+                        "GROUP BY CASE " +
+                        " WHEN glucose_level < 100 THEN 'Bình thường' " +
+                        " WHEN glucose_level BETWEEN 100 AND 125 THEN 'Tiền tiểu đường' " +
+                        " ELSE 'Tiểu đường' END";
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                area.append(
-                        rs.getString(1) + " : " + rs.getInt(2) + " ca\n"
-                );
+                data.put(rs.getString(1), rs.getInt(2));
+                area.append(rs.getString(1) + ": " + rs.getInt(2) + "\n");
             }
+
+            chartPanel.setData("Phân loại nguy cơ tiểu đường", data);
+
         } catch (Exception e) {
-            area.setText("Lỗi thống kê");
+            area.setText("Lỗi: " + e.getMessage());
         }
     }
 
-    // 3️⃣ Danh sách chẩn đoán chi tiết
-    private void statDetail() {
+    // ================= THÀNH PHỐ =================
+    private void loadCityStat() {
         area.setText("");
-        try {
-            String sql =
-                    "SELECT p.full_name, d.diabetes_type, d.risk_level " +
-                            "FROM patients p " +
-                            "JOIN diabetes_records r ON p.patient_id = r.patient_id " +
-                            "JOIN diagnosis d ON r.record_id = d.record_id";
+        Map<String, Integer> data = new LinkedHashMap<>();
 
-            ResultSet rs = conn.createStatement().executeQuery(sql);
+        String sql =
+                "SELECT city, COUNT(*) AS total FROM patients GROUP BY city ORDER BY total DESC";
 
-            area.append("🩺 DANH SÁCH CHẨN ĐOÁN CHI TIẾT\n");
-            area.append("---------------------------------\n");
+        try (Statement stmt = conn.createStatement();
+
+             ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                area.append(
-                        "👤 " + rs.getString(1) +
-                                " | Loại: " + rs.getString(2) +
-                                " | Nguy cơ: " + rs.getString(3) + "\n"
-                );
+                data.put(rs.getString(1), rs.getInt(2));
+                area.append(rs.getString(1) + ": " + rs.getInt(2) + "\n");
             }
+
+            chartPanel.setData("Số bệnh nhân theo thành phố", data);
+
         } catch (Exception e) {
-            area.setText("Lỗi thống kê");
+            area.setText("Lỗi: " + e.getMessage());
         }
     }
 }

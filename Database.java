@@ -4,7 +4,6 @@ import java.sql.Statement;
 
 public class Database {
 
-    // Thông tin kết nối Hive
     private static final String JDBC_URL = "jdbc:hive2://localhost:10000/diabetes";
     private static final String USER = "hive";
     private static final String PASSWORD = "";
@@ -12,65 +11,83 @@ public class Database {
     public static void main(String[] args) {
 
         try {
-            // 1. Load Hive JDBC Driver
             Class.forName("org.apache.hive.jdbc.HiveDriver");
 
-            // 2. Kết nối Hive
             Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
             Statement stmt = conn.createStatement();
 
             System.out.println("Kết nối Hive thành công");
 
-            // 3. Tạo database
+            // ===== DATABASE =====
             stmt.execute("CREATE DATABASE IF NOT EXISTS diabetes");
             stmt.execute("USE diabetes");
 
-            System.out.println("Tạo database diabetes");
+            // ===== PATIENTS =====
+            stmt.execute(
+                    "CREATE TABLE IF NOT EXISTS patients (" +
+                            "patient_id STRING," +
+                            "full_name STRING," +
+                            "gender STRING," +
+                            "birth_year INT," +
+                            "city STRING," +
+                            "created_at TIMESTAMP" +
+                            ") STORED AS ORC"
+            );
 
-            // 4. Tạo bảng patients
-            String createPatientsTable = "CREATE TABLE IF NOT EXISTS patients (\n" +
-                    "    patient_id STRING,\n" +
-                    "    full_name STRING,\n" +
-                    "    gender STRING,\n" +
-                    "    birth_year INT,\n" +
-                    "    city STRING,\n" +
-                    "    created_at TIMESTAMP\n" +
-                    ")\n" +
-                    "STORED AS ORC";
-            stmt.execute(createPatientsTable);
-            System.out.println("Tạo bảng patients");
+            // ===== RECORDS =====
+            stmt.execute(
+                    "CREATE TABLE IF NOT EXISTS diabetes_records (" +
+                            "record_id STRING," +
+                            "patient_id STRING," +
+                            "glucose_level DOUBLE," +
+                            "hba1c DOUBLE," +
+                            "blood_pressure INT," +
+                            "bmi DOUBLE," +
+                            "insulin DOUBLE," +
+                            "record_date TIMESTAMP" +
+                            ") STORED AS ORC"
+            );
 
-            // 5. Tạo bảng diabetes_records (partition)
-            String createRecordsTable = "CREATE TABLE IF NOT EXISTS diabetes_records (\n" +
-                    "    record_id STRING,\n" +
-                    "    patient_id STRING,\n" +
-                    "    glucose_level DOUBLE,\n" +
-                    "    hba1c DOUBLE,\n" +
-                    "    blood_pressure INT,\n" +
-                    "    bmi DOUBLE,\n" +
-                    "    insulin DOUBLE,\n" +
-                    "    record_date TIMESTAMP\n" +
-                    ")\n" +
-                    "STORED AS ORC";
-            stmt.execute(createRecordsTable);
-            System.out.println("Tạo bảng diabetes_records");
+            // ===== DIAGNOSIS =====
+            stmt.execute(
+                    "CREATE TABLE IF NOT EXISTS diagnosis (" +
+                            "record_id STRING," +
+                            "diabetes_type STRING," +
+                            "risk_level STRING," +
+                            "note STRING" +
+                            ") STORED AS ORC"
+            );
 
-            // 6. Tạo bảng diagnosis
-            String createDiagnosisTable = "CREATE TABLE IF NOT EXISTS diagnosis (\n" +
-                    "    record_id STRING,\n" +
-                    "    diabetes_type STRING,\n" +
-                    "    risk_level STRING,\n" +
-                    "    note STRING\n" +
-                    ")\n" +
-                    "STORED AS ORC";
-            stmt.execute(createDiagnosisTable);
-            System.out.println("Tạo bảng diagnosis");
+            // ===== STAGING (CSV IMPORT) =====
+            stmt.execute(
+                    "CREATE TABLE IF NOT EXISTS staging_medical (" +
+                            "patient_id STRING," +
+                            "full_name STRING," +
+                            "gender STRING," +
+                            "birth_year INT," +
+                            "city STRING," +
 
-            // 7. Đóng kết nối
+                            "record_id STRING," +
+                            "glucose_level DOUBLE," +
+                            "hba1c DOUBLE," +
+                            "blood_pressure INT," +
+                            "bmi DOUBLE," +
+                            "insulin DOUBLE," +
+                            "record_date TIMESTAMP," +
+
+                            "diabetes_type STRING," +
+                            "risk_level STRING," +
+                            "note STRING" +
+                            ") " +
+                            "ROW FORMAT DELIMITED " +
+                            "FIELDS TERMINATED BY ',' " +
+                            "STORED AS TEXTFILE"
+            );
+
+            System.out.println("Khởi tạo database + 4 bảng thành công");
+
             stmt.close();
             conn.close();
-
-            System.out.println("Khởi tạo database & bảng thành công!");
 
         } catch (Exception e) {
             e.printStackTrace();

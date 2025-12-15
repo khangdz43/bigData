@@ -6,13 +6,17 @@ import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+
+//GIAO DIỆN THỐNG KÊ
 public class StatisticPanel extends JPanel {
 
     private Connection conn;
     private JTextArea area;
+//    class
     private BarChartPanel chartPanel;
 
     public StatisticPanel(Connection conn) {
+
         this.conn = conn;
         setLayout(new BorderLayout(10, 10));
 
@@ -36,6 +40,8 @@ public class StatisticPanel extends JPanel {
         // ===== CHART =====
         chartPanel = new BarChartPanel();
         chartPanel.setPreferredSize(new Dimension(600, 300));
+        chartPanel.setBarClickListener(this::loadDetailByKey);
+
         add(chartPanel, BorderLayout.CENTER);
 
         // ===== TEXT =====
@@ -66,34 +72,43 @@ public class StatisticPanel extends JPanel {
         }
     }
 
-    // ================= NGUY CƠ =================
+// ================= NGUY CƠ (KẾT HỢP RISK + TYPE) =================
     private void loadRiskStat() {
         area.setText("");
         Map<String, Integer> data = new LinkedHashMap<>();
 
         String sql =
-                "SELECT CASE " +
-                        " WHEN glucose_level < 100 THEN 'Bình thường' " +
-                        " WHEN glucose_level BETWEEN 100 AND 125 THEN 'Tiền tiểu đường' " +
-                        " ELSE 'Tiểu đường' END AS risk, COUNT(*) " +
-                        "FROM diabetes_records " +
-                        "GROUP BY CASE " +
-                        " WHEN glucose_level < 100 THEN 'Bình thường' " +
-                        " WHEN glucose_level BETWEEN 100 AND 125 THEN 'Tiền tiểu đường' " +
-                        " ELSE 'Tiểu đường' END";
+                "SELECT " +
+                        " CASE " +
+                        "   WHEN d.diabetes_type = 'Type 1' THEN 'Rất cao' " +
+                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Cao' THEN 'Rất cao' " +
+                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Trung bình' THEN 'Cao' " +
+                        "   ELSE 'Thấp' " +
+                        " END AS final_risk, " +
+                        " COUNT(*) AS total " +
+                        "FROM diabetes_records r " +
+                        "JOIN diagnosis d ON r.record_id = d.record_id " +
+                        "GROUP BY " +
+                        " CASE " +
+                        "   WHEN d.diabetes_type = 'Type 1' THEN 'Rất cao' " +
+                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Cao' THEN 'Rất cao' " +
+                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Trung bình' THEN 'Cao' " +
+                        "   ELSE 'Thấp' " +
+                        " END";
 
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                data.put(rs.getString(1), rs.getInt(2));
-                area.append(rs.getString(1) + ": " + rs.getInt(2) + "\n");
+                data.put(rs.getString("final_risk"), rs.getInt("total"));
+                area.append(rs.getString("final_risk") + ": " + rs.getInt("total") + "\n");
             }
 
-            chartPanel.setData("Phân loại nguy cơ tiểu đường", data);
+            chartPanel.setData("Phân loại nguy cơ bệnh nhân", data);
 
         } catch (Exception e) {
             area.setText("Lỗi: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -120,4 +135,31 @@ public class StatisticPanel extends JPanel {
             area.setText("Lỗi: " + e.getMessage());
         }
     }
+
+//    load theo key
+private void loadDetailByKey(String key) {
+    area.setText("Chi tiết cho: " + key + "\n\n");
+
+    String sql =
+            "SELECT full_name, gender, city " +
+                    "FROM patients " +
+                    "WHERE city = '" + key + "' " +
+                    "LIMIT 20";
+
+    try (Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {
+
+        while (rs.next()) {
+            area.append(
+                    rs.getString("full_name") + " - " +
+                            rs.getString("gender") + " - " +
+                            rs.getString("city") + "\n"
+            );
+        }
+
+    } catch (Exception e) {
+        area.setText("Lỗi: " + e.getMessage());
+    }
+}
+
 }

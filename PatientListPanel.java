@@ -4,7 +4,7 @@ import java.awt.*;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-
+// GIAO DIỆN HIỂ THỊ ALL
 public class PatientListPanel extends JPanel {
 
     private Connection conn;
@@ -42,14 +42,10 @@ public class PatientListPanel extends JPanel {
 
         table = new JTable(model);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JScrollPane scroll = new JScrollPane(table);
-        add(scroll, BorderLayout.CENTER);
-
-        // ===== BUTTON =====
         JButton btnReload = new JButton("Tải lại dữ liệu");
         btnReload.addActionListener(e -> loadData());
-
         add(btnReload, BorderLayout.SOUTH);
 
         loadData();
@@ -66,7 +62,7 @@ public class PatientListPanel extends JPanel {
                         " d.diabetes_type, d.risk_level, d.note " +
                         "FROM patients p " +
 
-                        // 🔹 LẤY RECORD MỚI NHẤT THEO PATIENT
+                        // ===== LẤY RECORD MỚI NHẤT =====
                         "LEFT JOIN ( " +
                         "   SELECT r1.* " +
                         "   FROM diabetes_records r1 " +
@@ -79,28 +75,28 @@ public class PatientListPanel extends JPanel {
                         "   AND r1.record_date = r2.max_date " +
                         ") r ON p.patient_id = r.patient_id " +
 
-                        // 🔹 JOIN DIAGNOSIS
+                        // ===== JOIN DIAGNOSIS =====
                         "LEFT JOIN diagnosis d ON r.record_id = d.record_id " +
+
                         "ORDER BY p.full_name";
 
-        try {
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-            int stt = 1;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
+            int stt = 1;
             while (rs.next()) {
                 model.addRow(new Object[]{
                         stt++,
                         rs.getString("full_name"),
                         rs.getString("gender"),
-                        rs.getInt("birth_year"),
+                        rs.getObject("birth_year"),
                         rs.getString("city"),
-                        rs.getDouble("glucose_level"),
-                        rs.getDouble("hba1c"),
-                        rs.getInt("blood_pressure"),
-                        rs.getDouble("bmi"),
-                        rs.getDouble("insulin"),
-                        rs.getTimestamp("record_date"),
+                        rs.getObject("glucose_level"),
+                        rs.getObject("hba1c"),
+                        rs.getObject("blood_pressure"),
+                        rs.getObject("bmi"),
+                        rs.getObject("insulin"),
+                        rs.getObject("record_date"),
                         rs.getString("diabetes_type"),
                         rs.getString("risk_level"),
                         rs.getString("note")
@@ -108,7 +104,10 @@ public class PatientListPanel extends JPanel {
             }
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Lỗi tải dữ liệu: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Lỗi tải dữ liệu:\n" + e.getMessage(),
+                    "ERROR",
+                    JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }

@@ -38,7 +38,7 @@ public class AppMain extends JFrame {
         try {
             Class.forName("org.apache.hive.jdbc.HiveDriver");
             connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
-            System.out.println("✅ Kết nối Hive thành công!");
+            System.out.println(" Kết nối Hive thành công!");
         } catch (ClassNotFoundException | SQLException e) {
             JOptionPane.showMessageDialog(
                     this,

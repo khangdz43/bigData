@@ -19,7 +19,6 @@ public class Database {
             System.out.println("Kết nối Hive thành công");
 
             // ===== DATABASE =====
-            stmt.execute("CREATE DATABASE IF NOT EXISTS diabetes");
             stmt.execute("USE diabetes");
 
             // ===== PATIENTS =====

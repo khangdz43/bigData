@@ -1,9 +1,13 @@
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.UUID;
 
+
+//LAY OUT THÊM DATA
 public class MedicalRecordPanel extends JPanel {
 
     private Connection conn;
@@ -195,28 +199,47 @@ public class MedicalRecordPanel extends JPanel {
     // ================= IMPORT CSV + RUN ETL =================
     private void importCSV() {
         try {
+            //  Chọn file CSV
+            JFileChooser fileChooser = new JFileChooser();
+            int result = fileChooser.showOpenDialog(this);
+            if (result != JFileChooser.APPROVE_OPTION) {
+                JOptionPane.showMessageDialog(this, "Bạn chưa chọn file CSV!");
+                return;
+            }
+
+            File csvFile = fileChooser.getSelectedFile();
+            String localPath = csvFile.getAbsolutePath();
+            String containerPath = "/tmp/medical_data.csv"; // đường dẫn trong container
+
+            //  Copy file lên container Hive
+            String dockerCmd = "docker cp \"" + localPath + "\" hive-server:" + containerPath;
+
+            Process copyProcess = Runtime.getRuntime().exec(dockerCmd);
+            int copyExit = copyProcess.waitFor();
+            if (copyExit != 0) {
+                JOptionPane.showMessageDialog(this, "Lỗi copy file lên container Hive!");
+                return;
+            }
+
+            //  Load CSV vào staging table
             Statement stmt = conn.createStatement();
-
-            // 1️⃣ (OPTIONAL) Xóa staging cũ
-            stmt.execute("TRUNCATE TABLE staging_medical");
-
-            // 2️⃣ LOAD CSV vào STAGING
-            String loadSql =
-                    "LOAD DATA LOCAL INPATH '/tmp/medical_data.csv' " +
-                            "INTO TABLE staging_medical";
-
+            String loadSql = "LOAD DATA LOCAL INPATH '/tmp/medical_data.csv' " + "INTO TABLE staging_medical";
             stmt.execute(loadSql);
 
-            // 3️⃣ CHẠY ETL.SQL TRONG DOCKER
+            //  Chạy ETL để clean dữ liệu và insert vào các bảng chính
             runETLScript();
 
-            JOptionPane.showMessageDialog(this,
-                    "Import CSV + ETL thành công!");
+            JOptionPane.showMessageDialog(this, "Import CSV + ETL thành công!");
 
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Lỗi import/ETL: " + e.getMessage());
+        } catch (IOException | InterruptedException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi thao tác file/Docker: " + e.getMessage());
             e.printStackTrace();
+            System.out.println(e.getMessage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi Hive SQL/ETL: " + e.getMessage());
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+
         }
     }
 

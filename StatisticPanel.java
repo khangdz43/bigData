@@ -73,44 +73,38 @@ public class StatisticPanel extends JPanel {
     }
 
 // ================= NGUY CƠ (KẾT HỢP RISK + TYPE) =================
-    private void loadRiskStat() {
-        area.setText("");
-        Map<String, Integer> data = new LinkedHashMap<>();
+private void loadRiskStat() {
+    area.setText("");
+    Map<String, Integer> data = new LinkedHashMap<>();
 
-        String sql =
-                "SELECT " +
-                        " CASE " +
-                        "   WHEN d.diabetes_type = 'Type 1' THEN 'Rất cao' " +
-                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Cao' THEN 'Rất cao' " +
-                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Trung bình' THEN 'Cao' " +
-                        "   ELSE 'Thấp' " +
-                        " END AS final_risk, " +
-                        " COUNT(*) AS total " +
-                        "FROM diabetes_records r " +
-                        "JOIN diagnosis d ON r.record_id = d.record_id " +
-                        "GROUP BY " +
-                        " CASE " +
-                        "   WHEN d.diabetes_type = 'Type 1' THEN 'Rất cao' " +
-                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Cao' THEN 'Rất cao' " +
-                        "   WHEN d.diabetes_type = 'Type 2' AND d.risk_level = 'Trung bình' THEN 'Cao' " +
-                        "   ELSE 'Thấp' " +
-                        " END";
+    String sql =
+            "SELECT " +
+                    "   d.risk_level AS risk_level, " +
+                    "   COUNT(*) AS total " +
+                    "FROM diabetes_records r " +
+                    "JOIN diagnosis d ON r.record_id = d.record_id " +
+                    "GROUP BY d.risk_level " +
+                    "ORDER BY d.risk_level";
 
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+    try (Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {
 
-            while (rs.next()) {
-                data.put(rs.getString("final_risk"), rs.getInt("total"));
-                area.append(rs.getString("final_risk") + ": " + rs.getInt("total") + "\n");
-            }
+        while (rs.next()) {
+            String riskLevel = rs.getString("risk_level");
+            int total = rs.getInt("total");
 
-            chartPanel.setData("Phân loại nguy cơ bệnh nhân", data);
-
-        } catch (Exception e) {
-            area.setText("Lỗi: " + e.getMessage());
-            e.printStackTrace();
+            data.put(riskLevel, total);
+            area.append(riskLevel + ": " + total + "\n");
         }
+
+        chartPanel.setData("Phân loại nguy cơ bệnh nhân", data);
+
+    } catch (Exception e) {
+        area.setText("Lỗi: " + e.getMessage());
+        e.printStackTrace();
     }
+}
+
 
     // ================= THÀNH PHỐ =================
     private void loadCityStat() {

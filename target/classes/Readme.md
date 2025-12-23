@@ -1,6 +1,6 @@
 13/12: Bắt đầu làm project JAVA SWING THU THẬP và quản lí THÔNG TIN CỦA BỆNH NHÂN TIỂU ĐƯỜNG 
 14/12 : Xây dưng được database và làm giao diện cơ bản 
-
+19/12 : Hoàn thành project
 
 xóa dữ liệu theo năm
 thêm bản ghi bằng file csv được
